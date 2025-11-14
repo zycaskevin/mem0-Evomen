@@ -1,7 +1,7 @@
 # Mem0Evomem - 全球最強中文 AI 記憶系統
 
-**版本**: v1.0.0-dev
-**狀態**: 開發中
+**版本**: v1.0.0-dev (Week 2 Phase 2)
+**狀態**: TDD Green Phase 完成
 **基於**: [mem0](https://github.com/mem0ai/mem0) (Apache 2.0)
 
 ---
@@ -12,22 +12,36 @@ Mem0Evomem 是基於 mem0 的中文優化增強版，結合了 mem0 的完整功
 
 ### 核心價值
 
-- ✅ **中文準確度**: 44% → **95%+** (+116%)
-- ✅ **功能完整性**: 40% → **93%+** (+133%)
+- ✅ **中文準確度**: 目標 44% → **95%+** (+116%)
+- ✅ **功能完整性**: 目標 40% → **93%+** (+133%)
 - ✅ **100% 向後兼容**: 完全兼容 mem0 API
 - ✅ **生態系統**: LangChain + LlamaIndex + MCP
 
 ---
 
-## 📊 關鍵數據
+## 📊 當前開發狀態 (Week 2)
 
-| 指標 | mem0 原版 | **Mem0Evomem** | 提升 |
-|------|----------|---------------|------|
-| 中文簡單查詢 | 67% | **95%+** | +42% |
-| 中文複雜查詢 | 78% | **97%+** | +24% |
-| 中文長文查詢 | 0% | **95%+** | +95% |
-| 功能完整性 | 76.7% | **93%+** | +21% |
-| 向後兼容 | - | **100%** | - |
+### ✅ Phase 0: SBE (Specification by Example)
+- [x] 創建 BDD 規範文件 (features/bge_m3.feature)
+- [x] 19 個 Scenarios 定義完成
+
+### ✅ Phase 1: TDD Red
+- [x] 19 個單元測試（tests/unit/test_bge_m3.py）
+- [x] 測試全部失敗（預期行為）
+
+### ✅ Phase 2: TDD Green (當前完成)
+- [x] BGEM3Embedding 類別實現 (src/embeddings/bge_m3.py)
+- [x] embed() 方法：單文本嵌入 → 1024 維向量
+- [x] batch_embed() 方法：批次嵌入支援
+- [x] 基本錯誤處理：空文本驗證
+- [x] 語法驗證通過 (Steps 1-7)
+- [x] 提交 Green Phase commit (1dc6631)
+
+### ⏳ Phase 3: TDD Refactor (下一步)
+- [ ] 類型檢查 (mypy --strict)
+- [ ] 複雜度分析 (C ≤ 1.25)
+- [ ] 文檔完善
+- [ ] 性能優化
 
 ---
 
@@ -36,39 +50,26 @@ Mem0Evomem 是基於 mem0 的中文優化增強版，結合了 mem0 的完整功
 ```
 Mem0Evomem/
 ├── README.md                    # 專案說明
-├── QUICK_START.md              # 快速開始指南
-├── LICENSE                      # Apache 2.0 授權
-├── NOTICE                       # 法律聲明
-│
-├── docs/                        # 📚 文檔目錄
-│   ├── strategy/               # 策略文檔
-│   │   ├── CODE_AUDIT_EXECUTIVE_SUMMARY.md      # 代碼審核執行摘要
-│   │   ├── OPTIMIZED_IMPLEMENTATION_PLAN.md     # 優化實施計劃 (6週)
-│   │   ├── TECHNICAL_AUDIT_REPORT_V2.md        # 技術審核報告 v2.0
-│   │   ├── EXECUTIVE_SUMMARY.md                 # 專案執行摘要
-│   │   ├── MEM0_UPGRADE_PLAN.md                # mem0 升級計劃
-│   │   ├── IMPLEMENTATION_CHECKLIST.md          # 實施檢查清單
-│   │   └── COMPARISON_SUMMARY_TABLE.md          # 功能對比總結
-│   ├── guides/                 # 使用指南
-│   └── api/                    # API 文檔
+├── DEVELOPMENT_WORKFLOW.md     # 開發工作流程 (完整 TDD)
+├── ERROR_DIAGNOSIS.md           # 環境兼容性診斷
+├── VERIFICATION_GUIDE.md        # 驗證指南
 │
 ├── src/                         # 💻 源代碼
-│   ├── embeddings/             # BGE-M3 Embedder
-│   │   └── bge_m3.py          # 中文優化 embedder (~80 行)
-│   └── reranker/               # BGE Reranker
-│       └── bge_reranker.py    # 複雜查詢優化 (~60 行)
+│   ├── embeddings/
+│   │   └── bge_m3.py           # BGE-M3 Embedder (已實現)
+│   └── reranker/
+│       └── bge_reranker.py     # BGE Reranker (待實現)
 │
 ├── tests/                       # 🧪 測試
-│   ├── unit/                   # 單元測試
-│   ├── integration/            # 整合測試
-│   └── benchmarks/             # 性能測試
+│   ├── unit/
+│   │   └── test_bge_m3.py      # BGE-M3 單元測試 (19 tests)
+│   ├── integration/
+│   └── benchmarks/
 │
-├── config/                      # ⚙️ 配置
-│   ├── chinese_optimized.yaml  # 中文優化配置
-│   └── development.yaml        # 開發配置
+├── features/                    # 📋 BDD 規範
+│   └── bge_m3.feature          # BGE-M3 Scenarios (19)
 │
-└── .github/                     # GitHub 配置
-    └── workflows/              # CI/CD
+└── syntax_test.py               # AST 語法驗證工具
 ```
 
 ---
@@ -77,56 +78,57 @@ Mem0Evomem/
 
 ### 環境要求
 
-- Python 3.9+
+- Python 3.9+ (推薦 3.11 或 3.12，避免 3.13)
 - mem0 1.0+
 - FlagEmbedding 1.3.5+
+
+**注意**: Windows + Python 3.13 + torchvision 存在兼容性問題，詳見 [ERROR_DIAGNOSIS.md](ERROR_DIAGNOSIS.md)
 
 ### 安裝
 
 ```bash
 # 克隆專案
-git clone https://github.com/[your-org]/Mem0Evomem.git
+git clone https://github.com/zycaskevin/mem0-Evomen.git
 cd Mem0Evomem
 
 # 安裝依賴
 pip install -r requirements.txt
-
-# 開發模式安裝
-pip install -e ".[dev]"
 ```
 
 ### 基本使用
 
 ```python
-from mem0 import Memory
+from src.embeddings.bge_m3 import BGEM3Embedding
 
-# 中文優化配置
-config = {
-    "embedder": {
-        "provider": "bge-m3",
-        "config": {
-            "model": "BAAI/bge-m3",
-            "use_fp16": True
-        }
-    },
-    "reranker": {
-        "enabled": True,
-        "model": "BAAI/bge-reranker-v2-m3"
-    }
-}
+# 創建 embedder 實例
+embedder = BGEM3Embedding(
+    model_name="BAAI/bge-m3",
+    use_fp16=True,
+    device="cpu",
+    max_length=8192
+)
 
-# 創建記憶實例
-memory = Memory.from_config(config)
+# 單文本嵌入
+vector = embedder.embed("Python 是一種強大的程式語言")
+print(f"向量維度: {len(vector)}")  # 輸出: 1024
 
-# 添加中文記憶
-memory.add("Python 是一種強大的程式語言", user_id="user_1")
-memory.add("機器學習是 AI 的核心技術", user_id="user_1")
+# 批次嵌入
+texts = ["文本1", "文本2", "文本3"]
+vectors = embedder.batch_embed(texts, batch_size=32)
+print(f"批次嵌入: {len(vectors)} 個向量")  # 輸出: 3
+```
 
-# 查詢（自動使用 reranker）
-results = memory.search("什麼是 Python？", user_id="user_1")
+### 運行測試
 
-print(results['results'][0]['memory'])
-# 輸出: Python 是一種強大的程式語言
+```bash
+# 語法驗證（AST parsing，無需環境）
+python syntax_test.py
+
+# 單元測試（需要 Python 3.11 或 Linux/WSL）
+pytest tests/unit/test_bge_m3.py -v
+
+# 使用 Windows 批次文件
+RUN_TEST.bat
 ```
 
 ---
@@ -138,100 +140,45 @@ print(results['results'][0]['memory'])
 1. **[DEVELOPMENT_WORKFLOW.md](DEVELOPMENT_WORKFLOW.md)** ⭐ **開發必讀**
    - 完整開發工作流程（SBE + TDD + 多專家協作）
    - 基於 CODEX 啟動指南 v1.0 + CLAUDE.md v3.5
-   - Phase 0-6 完整流程（前商業 → SBE → Red → Green → Refactor → Review → Integration）
+   - Phase 0-6 完整流程
    - 多專家角色矩陣（小秘、小研、小品、小架、小質、小程、小憶、小數、小策）
-   - EvoMem 決策樹與 Token 管理策略
-   - 任務前檢查清單（6 個階段）
 
-2. **[DEVELOPMENT_GUIDE.md](DEVELOPMENT_GUIDE.md)** ⭐ 技術指南
-   - TDD 技術細節與範例（18,000+ 字）
-   - Red-Green-Refactor 詳細說明
-   - 跨審查流程（Self-Review + Context7 + Dual AI）
-   - 品質標準與檢查指令
+2. **[ERROR_DIAGNOSIS.md](ERROR_DIAGNOSIS.md)** ⭐ 環境問題診斷
+   - Windows + Python 3.13 + torchvision 兼容性問題
+   - 4 種解決方案（Python 3.11, Linux/WSL, CPU-only, Mock）
+   - 完整錯誤分析與驗證矩陣
 
-3. **[CLAUDE.md](../CLAUDE.md)** - 工作區層級規範
-   - Agent 調度系統（小憶、小程、小質）
-   - 三層智能系統（Agent Dispatcher + Output Style Switcher + Plugin Manager）
-   - Token 管理最佳實踐
-
-4. **[CODEX啟動指南](../CODEX啟動指南_v1.0.md)** - 原始框架
-   - Codex 多專家協作框架
-   - 思考框架指派（思維樹、思維鍊、PREP）
-   - 上下文/Token 管理策略
-
-### 策略文檔（已完成）
-
-1. **[代碼審核執行摘要](docs/strategy/CODE_AUDIT_EXECUTIVE_SUMMARY.md)** ⭐ 推薦閱讀
-   - 深度源碼分析結果
-   - 兩大重大發現
-   - 實施複雜度降低 60%
-
-2. **[優化實施計劃](docs/strategy/OPTIMIZED_IMPLEMENTATION_PLAN.md)** ⭐ 實施指南
-   - 6 週詳細計劃
-   - 極簡實施清單（140 行代碼 + 2 行修改）
-   - 風險管理
-
-3. **[技術審核報告 v2.0](docs/strategy/TECHNICAL_AUDIT_REPORT_V2.md)**
-   - mem0 架構深度分析
-   - Reranker 機制發現
-   - API 兼容性驗證
-
-4. **[專案執行摘要](docs/strategy/EXECUTIVE_SUMMARY.md)**
-   - 10 週實施計劃（已優化為 6 週）
-   - 商業化路線圖
-   - 成功指標
-
-5. **[實施檢查清單](docs/strategy/IMPLEMENTATION_CHECKLIST.md)**
-   - 70+ 檢查項目
-   - 每日/每週任務
-   - 風險緩解措施
-
-### 使用指南（待補充）
-
-- [ ] 中文優化配置指南
-- [ ] BGE-M3 Embedder 使用
-- [ ] BGE Reranker 最佳實踐
-- [ ] 性能調優指南
+3. **[VERIFICATION_GUIDE.md](VERIFICATION_GUIDE.md)** - 驗證流程
+   - 完整驗證步驟（3000+ 字）
+   - 手動驗證指南
+   - 自動化測試腳本
 
 ---
 
 ## 🛠️ 開發狀態
 
-### Phase 0: 策略規劃 ✅ 已完成
+### Week 1 ✅ 已完成
+- [x] Git 初始化與遠程連接
+- [x] 開發文檔創建
 
-- [x] 嚴格功能對比分析
-- [x] 技術可行性審核
-- [x] 深度源碼分析（codex + context7）
-- [x] 優化實施計劃
+### Week 2 Phase 2 ✅ 已完成 (當前)
+- [x] SBE .feature 文件 (19 scenarios)
+- [x] TDD Red 測試 (19 tests)
+- [x] **TDD Green 實現** (BGEM3Embedding 類別)
+- [x] 語法驗證通過
+- [x] Git commit 提交 (1dc6631)
 
-### Phase 1: Fork 與環境建置 🔄 準備中
+### Week 2 Phase 3 ⏳ 下一步
+- [ ] TDD Refactor - 重構優化
+- [ ] 類型檢查 (mypy --strict)
+- [ ] 複雜度分析 (radon cc)
+- [ ] 完整文檔
 
-**目標**: Week 1
-- [ ] Fork mem0 官方倉庫
-- [ ] 建立開發分支
-- [ ] 配置開發環境
-- [ ] 法律合規文件
-
-### Phase 2: BGE-M3 整合 ⏳ 待開始
-
-**目標**: Week 2-3
-- [ ] 實現 BGEM3Embedding (~80 行)
-- [ ] 註冊 provider (2 行修改)
-- [ ] 中文準確度測試 (>90%)
-
-### Phase 3: BGE Reranker 整合 ⏳ 待開始
-
-**目標**: Week 4
-- [ ] 實現 BGEReranker (~60 行)
-- [ ] 複雜查詢測試 (>95%)
-- [ ] 性能測試 (<500ms)
-
-### Phase 4: 測試與文檔 ⏳ 待開始
-
-**目標**: Week 5-6
-- [ ] 完整測試套件 (>90% coverage)
-- [ ] 中英文文檔
-- [ ] v1.0.0 發布
+### Week 3-4 ⏳ 待開始
+- [ ] Python 3.11 環境設置
+- [ ] 完整運行時測試
+- [ ] BGE Reranker 整合
+- [ ] 性能基準測試
 
 ---
 
@@ -239,17 +186,24 @@ print(results['results'][0]['memory'])
 
 | 指標 | 目標 | 當前狀態 |
 |------|------|---------|
-| 中文查詢準確度 | 95%+ | 待測試 |
-| 英文查詢準確度 | 85%+ | 待測試 |
-| 查詢延遲 P50 | <500ms | 待測試 |
-| 測試覆蓋率 | >90% | 0% |
-| 向後兼容性 | 100% | 待驗證 |
+| BGE-M3 實現 | 完成 | ✅ 已完成 |
+| 語法驗證 | 通過 | ✅ 通過 (Steps 1-7) |
+| 單元測試 | 19 tests | ✅ 已創建 |
+| 運行時測試 | 通過 | ⏳ 環境限制 (Week 3) |
+| 測試覆蓋率 | >90% | ⏳ 待測量 |
 
 ---
 
 ## 🤝 貢獻指南
 
-歡迎貢獻！請查看 [CONTRIBUTING.md](CONTRIBUTING.md)
+本專案遵循 TDD (Test-Driven Development) 開發流程：
+
+1. **Phase 0**: 創建 BDD .feature 文件
+2. **Phase 1**: 寫測試（Red）
+3. **Phase 2**: 最小實現（Green）
+4. **Phase 3**: 重構（Refactor）
+
+詳見 [DEVELOPMENT_WORKFLOW.md](DEVELOPMENT_WORKFLOW.md)
 
 ---
 
@@ -259,22 +213,19 @@ print(results['results'][0]['memory'])
 
 新增代碼（BGE-M3 Embedder, BGE Reranker）採用 MIT 授權。
 
-詳見 [LICENSE](LICENSE) 和 [NOTICE](NOTICE)
-
 ---
 
 ## 🙏 致謝
 
-- **mem0ai** - 提供優秀的基礎架構
-- **FlagEmbedding** - BGE-M3 和 BGE Reranker
+- **mem0ai** - 提供優秀的基礎架構 ([GitHub](https://github.com/mem0ai/mem0))
+- **FlagEmbedding** - BGE-M3 和 BGE Reranker ([GitHub](https://github.com/FlagOpen/FlagEmbedding))
 - **EvoMem Team** - 中文優化技術
 
 ---
 
 ## 📞 聯繫方式
 
-- **Issues**: [GitHub Issues](https://github.com/[your-org]/Mem0Evomem/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/[your-org]/Mem0Evomem/discussions)
+- **GitHub Issues**: [Report Issues](https://github.com/zycaskevin/mem0-Evomen/issues)
 - **Email**: zycaskevin@example.com
 
 ---
@@ -283,4 +234,6 @@ print(results['results'][0]['memory'])
 
 **最後更新**: 2025-11-14
 
-**版本**: v1.0.0-dev
+**版本**: v1.0.0-dev (Week 2 Phase 2 完成)
+
+**Git Commit**: 1dc6631
