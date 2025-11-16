@@ -158,6 +158,20 @@ logs/
 *.bak
 *.cache
 
+# Production deployment
+.env.production
+.env.staging
+.env.local
+*.secure
+data/backups/
+data/chroma_db/
+certs/
+*.pem
+*.key
+docker-build.log
+docker-rebuild.log
+docker-build-round*.log
+
 # mem0 specific
 db
 test-db
