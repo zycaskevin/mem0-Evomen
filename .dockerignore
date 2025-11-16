@@ -1,0 +1,117 @@
+# Mem0Evomem Docker Ignore File
+# 排除不需要複製到容器的文件，減少鏡像大小
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+venv310/
+ENV/
+env/
+.venv
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation (build artifacts)
+docs/_build/
+site/
+
+# Data directories (should use volumes instead)
+chroma_db/
+test_chroma_db/
+*.db
+*.sqlite
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+tmp/
+temp/
+.temp/
+scripts/temp/
+
+# Archives
+.archive/
+*.tar
+*.tar.gz
+*.zip
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.circleci/
+
+# Docker files (don't copy themselves)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Large data files
+*.pkl
+*.h5
+*.hdf5
+models/
+*.pt
+*.pth
+
+# Backup files
+*.backup
+*.bak
+CLAUDE.md.backup
+
+# Project specific
+CHANGELOG.md
+WEEK1_*.md
+PHASE*.md
+FINAL_REPORT*.md
+*_REPORT.md
+*_GUIDE.md
+*_AUDIT*.md
+data/checkpoints/
+data/handoffs/
+data/reviews/
+data/analysis/

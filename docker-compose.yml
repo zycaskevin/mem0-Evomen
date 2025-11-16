@@ -1,0 +1,91 @@
+# Mem0Evomem Docker Compose Configuration
+# 用於本地開發、測試和生產部署
+
+version: '3.8'
+
+services:
+  # 主應用服務
+  mem0evomem:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mem0evomem:v1.0.0
+    container_name: mem0evomem
+
+    # 端口映射（如有 API 服務）
+    ports:
+      - "8000:8000"
+
+    # 環境變量
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=production
+
+    # 數據卷掛載（持久化數據）
+    volumes:
+      # 數據目錄
+      - ./data:/app/data
+      # ChromaDB 向量數據庫
+      - ./chroma_db:/app/chroma_db
+      # 日誌（可選）
+      - ./logs:/app/logs
+
+    # 資源限制（防止記憶體溢出）
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+    # 重啟策略
+    restart: unless-stopped
+
+    # 健康檢查
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+    # 網絡
+    networks:
+      - mem0evomem-network
+
+  # 測試服務（用於 CI/CD）
+  mem0evomem-test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mem0evomem:test
+    container_name: mem0evomem-test
+
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=DEBUG
+      - ENVIRONMENT=test
+
+    volumes:
+      - ./tests:/app/tests
+      - ./data:/app/data
+
+    # 覆蓋默認命令以運行測試
+    command: ["python", "-m", "pytest", "tests/integration/simple_e2e_test.py", "-v", "--tb=short"]
+
+    networks:
+      - mem0evomem-network
+
+networks:
+  mem0evomem-network:
+    driver: bridge
+
+volumes:
+  # 命名卷（可選，用於生產環境數據持久化）
+  mem0evomem-data:
+    driver: local
+  mem0evomem-chroma:
+    driver: local
