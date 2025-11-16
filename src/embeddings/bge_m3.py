@@ -5,8 +5,8 @@
 """
 
 import logging
-from typing import List, Optional
-from FlagEmbedding import BGEM3FlagModel
+from typing import List, Optional, cast
+from FlagEmbedding import BGEM3FlagModel  # type: ignore[import-untyped]
 
 # 配置日誌
 logger = logging.getLogger(__name__)
@@ -103,7 +103,20 @@ class BGEM3Embedding:
         )
 
         # 返回第一個向量（轉為 Python list）
-        return result['dense_vecs'][0].tolist()
+        return cast(List[float], result['dense_vecs'][0].tolist())
+
+    def _validate_texts(self, texts: List[str]) -> None:
+        """驗證文本列表，確保所有文本非空
+
+        Args:
+            texts: 待驗證的文本列表
+
+        Raises:
+            ValueError: 當任何文本為空時
+        """
+        for i, text in enumerate(texts):
+            if not text or not text.strip():
+                raise ValueError(f"第 {i+1} 個文本為空，不能嵌入空文本")
 
     def batch_embed(
         self,
@@ -135,10 +148,8 @@ class BGEM3Embedding:
         if not texts:
             return []
 
-        # 驗證所有文本非空（允許批次中有重複）
-        for i, text in enumerate(texts):
-            if not text or not text.strip():
-                raise ValueError(f"第 {i+1} 個文本為空，不能嵌入空文本")
+        # 驗證所有文本非空
+        self._validate_texts(texts)
 
         # 批次嵌入
         result = self.model.encode(
@@ -148,7 +159,7 @@ class BGEM3Embedding:
         )
 
         # 返回所有向量（轉為 Python list）
-        return [vec.tolist() for vec in result['dense_vecs']]
+        return cast(List[List[float]], [vec.tolist() for vec in result['dense_vecs']])
 
     def __repr__(self) -> str:
         """字串表示"""
