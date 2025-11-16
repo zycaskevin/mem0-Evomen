@@ -8,15 +8,18 @@ License: Apache 2.0
 """
 
 import logging
-from typing import List, cast
+from typing import List, Optional, cast
 from FlagEmbedding import BGEM3FlagModel  # type: ignore[import-untyped]
+
+from mem0.configs.embeddings.base import BaseEmbedderConfig
+from mem0.embeddings.base import EmbeddingBase
 
 # 配置日誌
 logger = logging.getLogger(__name__)
 
 
-class BGEM3Embedding:
-    """BGE-M3 中文文本嵌入器 (獨立版本)
+class BGEM3Embedding(EmbeddingBase):
+    """BGE-M3 中文文本嵌入器 (mem0 集成版本)
 
     將中文文本轉換為 1024 維語義向量，支援語義搜索和相似度計算。
 
@@ -34,49 +37,49 @@ class BGEM3Embedding:
     - 中文優化: 針對中文語義理解進行優化
 
     範例:
-        >>> embedder = BGEM3Embedding()
+        >>> config = BaseEmbedderConfig(model="BAAI/bge-m3")
+        >>> embedder = BGEM3Embedding(config)
         >>> vector = embedder.embed("這是一個測試句子")
         >>> len(vector)
         1024
-        >>> vectors = embedder.batch_embed(["文本1", "文本2", "文本3"])
-        >>> len(vectors)
-        3
     """
 
     # 類常量
     DEFAULT_BATCH_SIZE = 256
     CHAR_TO_TOKEN_RATIO = 0.67  # 1 token ≈ 1.5 字
 
-    def __init__(
-        self,
-        model_name: str = "BAAI/bge-m3",
-        use_fp16: bool = True,
-        device: str = "cpu",
-        max_length: int = 8192
-    ):
+    def __init__(self, config: Optional[BaseEmbedderConfig] = None):
         """初始化 BGE-M3 Embedder
 
         Args:
-            model_name: 模型名稱，默認 "BAAI/bge-m3"
-            use_fp16: 是否使用 FP16 精度，默認 True（提高效能）
-            device: 運行設備，默認 "cpu"（相容性優先）
-            max_length: 最大序列長度，默認 8192
+            config: Embedder 配置對象
 
         Raises:
             Exception: 當模型載入失敗時
         """
-        self.model_name = model_name
+        super().__init__(config)
+
+        # 從 config 讀取參數，提供默認值
+        self.config.model = self.config.model or "BAAI/bge-m3"
+        self.config.embedding_dims = 1024  # BGE-M3 固定維度
+
+        # 從 model_kwargs 讀取額外參數
+        model_kwargs = self.config.model_kwargs or {}
+        use_fp16 = model_kwargs.get("use_fp16", True)
+        device = model_kwargs.get("device", "cpu")
+        max_length = model_kwargs.get("max_length", 8192)
+
+        self.model_name = self.config.model
         self.use_fp16 = use_fp16
         self.device = device
         self.max_length = max_length
-        self.embedding_dims = 1024  # BGE-M3 固定維度
 
         # 載入 BGE-M3 模型
-        logger.info(f"Loading {model_name} with FP16={use_fp16} on {device}")
+        logger.info(f"Loading {self.model_name} with FP16={use_fp16} on {device}")
         try:
             # type: Any due to FlagEmbedding missing type stubs
             self.model = BGEM3FlagModel(
-                model_name,
+                self.model_name,
                 use_fp16=use_fp16,
                 device=device
             )
