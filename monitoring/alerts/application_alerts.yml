@@ -1,0 +1,91 @@
+# 應用層級告警規則
+# Mem0Evomem Application Monitoring
+
+groups:
+  - name: application_alerts
+    interval: 30s
+    rules:
+      # BGE-M3 Embedder 性能告警
+      - alert: HighEmbeddingLatency
+        expr: histogram_quantile(0.95, rate(bge_m3_embedding_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: bge-m3
+        annotations:
+          summary: "BGE-M3 嵌入延遲過高"
+          description: "P95 嵌入延遲已超過 500ms (當前: {{ $value }}s)"
+
+      - alert: LowEmbeddingThroughput
+        expr: rate(bge_m3_embeddings_total[5m]) < 1
+        for: 5m
+        labels:
+          severity: warning
+          component: bge-m3
+        annotations:
+          summary: "BGE-M3 吞吐量過低"
+          description: "嵌入吞吐量低於 1 req/s (當前: {{ $value }} req/s)"
+
+      # ChromaDB 查詢性能告警
+      - alert: SlowChromaDBQueries
+        expr: histogram_quantile(0.95, rate(chromadb_query_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: chromadb
+        annotations:
+          summary: "ChromaDB 查詢緩慢"
+          description: "P95 查詢延遲已超過 1s (當前: {{ $value }}s)"
+
+      # API 錯誤率告警
+      - alert: HighAPIErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "API 錯誤率過高"
+          description: "API 5xx 錯誤率已超過 5% (當前: {{ $value | humanizePercentage }})"
+
+      - alert: CriticalAPIErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.10
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "API 錯誤率嚴重過高"
+          description: "API 5xx 錯誤率已超過 10% (當前: {{ $value | humanizePercentage }})"
+
+      # 容器健康檢查告警
+      - alert: ContainerDown
+        expr: up{job="mem0evomem"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: docker
+        annotations:
+          summary: "容器已停止 ({{ $labels.instance }})"
+          description: "Mem0Evomem 容器無法訪問"
+
+      - alert: ContainerRestarting
+        expr: rate(container_last_seen{name=~"mem0evomem.*"}[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: docker
+        annotations:
+          summary: "容器頻繁重啟 ({{ $labels.name }})"
+          description: "容器在過去 5 分鐘內發生重啟"
+
+      # 記憶體洩漏檢測
+      - alert: PossibleMemoryLeak
+        expr: (container_memory_usage_bytes{name=~"mem0evomem.*"} / container_spec_memory_limit_bytes{name=~"mem0evomem.*"}) - (container_memory_usage_bytes{name=~"mem0evomem.*"} offset 1h / container_spec_memory_limit_bytes{name=~"mem0evomem.*"} offset 1h) > 0.20
+        for: 30m
+        labels:
+          severity: warning
+          component: docker
+        annotations:
+          summary: "可能存在記憶體洩漏 ({{ $labels.name }})"
+          description: "記憶體使用率在過去 1 小時增加了 20%+"

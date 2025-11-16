@@ -1,0 +1,80 @@
+# 系統層級告警規則
+# Mem0Evomem Monitoring
+
+groups:
+  - name: system_alerts
+    interval: 30s
+    rules:
+      # CPU 使用率告警
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "CPU 使用率過高 (instance {{ $labels.instance }})"
+          description: "CPU 使用率已超過 80% (當前: {{ $value }}%)"
+
+      - alert: CriticalCPUUsage
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "CPU 使用率嚴重過高 (instance {{ $labels.instance }})"
+          description: "CPU 使用率已超過 95% (當前: {{ $value }}%)"
+
+      # 記憶體使用率告警
+      - alert: HighMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "記憶體使用率過高 (instance {{ $labels.instance }})"
+          description: "記憶體使用率已超過 85% (當前: {{ $value }}%)"
+
+      - alert: CriticalMemoryUsage
+        expr: (node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "記憶體使用率嚴重過高 (instance {{ $labels.instance }})"
+          description: "記憶體使用率已超過 95% (當前: {{ $value }}%)"
+
+      # 磁碟空間告警
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "磁碟空間不足 (instance {{ $labels.instance }})"
+          description: "根分區可用空間低於 20% (當前: {{ $value }}%)"
+
+      - alert: CriticalDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 2m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "磁碟空間嚴重不足 (instance {{ $labels.instance }})"
+          description: "根分區可用空間低於 10% (當前: {{ $value }}%)"
+
+      # 磁碟 I/O 告警
+      - alert: HighDiskIOUtilization
+        expr: rate(node_disk_io_time_seconds_total[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "磁碟 I/O 使用率過高 (instance {{ $labels.instance }})"
+          description: "磁碟 I/O 使用率已超過 80% (當前: {{ $value }})"
