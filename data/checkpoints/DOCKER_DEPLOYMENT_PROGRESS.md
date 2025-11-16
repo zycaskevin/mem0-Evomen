@@ -57,14 +57,17 @@
 
 ---
 
-### PyTorch 版本選擇: 2.4.1 + 0.19.1
+### PyTorch 版本選擇: 2.8.0 + 0.23.0 (最終版本)
 
-**原因**:
-1. 穩定版本組合，避免依賴衝突
-2. 原方案 (2.9.0 + 0.23.0) 在 Docker 構建時衝突
-   - torchvision 0.23.0 要求 torch==2.8.0
-   - 但 requirements.txt 指定 torch==2.9.0
-3. 2.4.1 是 LTS (Long Term Support) 版本
+**演進歷程**:
+1. **第 1 次**: torch 2.9.0 + torchvision 0.23.0 → ❌ 版本衝突
+2. **第 2 次**: torch 2.4.1 + torchvision 0.19.1 → ❌ 安全性阻擋 (CVE-2025-32434)
+3. **第 3 次**: torch 2.8.0 + torchvision 0.23.0 → ✅ 官方穩定配對
+
+**選擇原因**:
+1. 解決 CVE-2025-32434 安全漏洞（transformers 4.57.1 強制要求 torch >= 2.6）
+2. 官方認證的穩定版本組合
+3. 符合安全性要求且相容所有依賴
 
 ---
 
@@ -95,7 +98,7 @@ USER appuser  # UID 1000
 
 ### Docker 鏡像構建
 
-**狀態**: 🔄 構建中（第 2 次嘗試）
+**狀態**: 🔄 構建中（第 3 次嘗試）
 
 **第 1 次嘗試**:
 - ❌ 失敗原因: PyTorch 版本衝突
@@ -103,9 +106,43 @@ USER appuser  # UID 1000
 - 解決: 降級至穩定版本組合 (2.4.1 + 0.19.1)
 
 **第 2 次嘗試**:
-- ⏳ 進行中
-- 預期時間: 3-5 分鐘
-- 下載進度: 正在安裝 PyTorch + transformers
+- ✅ 構建成功 (exit code 0)
+- ❌ 測試失敗: `Unsupported embedding provider: bge_m3`
+- **根本原因發現**: BGE-M3 Embedder 未整合到 mem0 系統
+  - `src/embeddings/bge_m3.py` 是獨立代碼
+  - Docker 容器使用 `./mem0/` (官方 mem0 代碼)
+  - mem0 配置系統不認識 `provider: bge_m3`
+
+**解決方案**:
+1. ✅ 複製 `src/embeddings/bge_m3.py` → `mem0/embeddings/bge_m3.py`
+2. ✅ 註冊到 `mem0/embeddings/configs.py` (EmbedderConfig 驗證列表)
+3. ✅ 註冊到 `mem0/utils/factory.py` (EmbedderFactory.provider_to_class)
+4. ✅ Git 提交: commit `df4de0ff`
+
+**第 3 次嘗試**:
+- ✅ 構建成功 (exit code 0)
+- ❌ 測試失敗: `HFValidationError: Repo id must use alphanumeric chars...`
+- **根本原因**: BGE-M3 Embedder 接口不符合 mem0 規範
+  - 原 `__init__` 接收 `model_name: str` 參數
+  - EmbedderFactory 傳入 `BaseEmbedderConfig` 對象
+  - Config 對象被當作字串傳給 HuggingFace
+- **解決方案**:
+  1. ✅ 繼承 `EmbeddingBase`
+  2. ✅ 修改 `__init__` 接收 `BaseEmbedderConfig`
+  3. ✅ 從 `self.config.model` 讀取參數
+  4. ✅ Git 提交: commit `9c106211`
+
+**第 4 次嘗試**:
+- ✅ 構建成功，模型下載完成 (30 files)
+- ❌ 測試失敗: `ValueError: require users to upgrade torch to at least v2.6`
+- **根本原因**: CVE-2025-32434 安全漏洞
+  - torch 2.4.1 被 transformers 4.57.1 阻擋
+  - transformers 強制要求 torch >= 2.6
+- **解決方案**:
+  1. ✅ 升級至 torch 2.8.0 + torchvision 0.23.0
+  2. ✅ 更新 requirements.txt
+  3. ✅ 更新技術決策文檔
+  4. ⏳ 準備第 5 次 Docker 構建
 
 ---
 
