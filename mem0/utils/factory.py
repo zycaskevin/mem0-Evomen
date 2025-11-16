@@ -146,6 +146,7 @@ class EmbedderFactory:
         "langchain": "mem0.embeddings.langchain.LangchainEmbedding",
         "aws_bedrock": "mem0.embeddings.aws_bedrock.AWSBedrockEmbedding",
         "fastembed": "mem0.embeddings.fastembed.FastEmbedEmbedding",
+        "bge_m3": "mem0.embeddings.bge_m3.BGEM3Embedding",  # Mem0Evomem: Chinese-optimized BGE-M3
     }
 
     @classmethod

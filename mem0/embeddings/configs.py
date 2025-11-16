@@ -25,6 +25,7 @@ class EmbedderConfig(BaseModel):
             "langchain",
             "aws_bedrock",
             "fastembed",
+            "bge_m3",  # Mem0Evomem: Chinese-optimized BGE-M3 Embedder
         ]:
             return v
         else:
