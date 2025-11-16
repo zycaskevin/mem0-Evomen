@@ -14,7 +14,7 @@ services:
 
     # 端口映射（如有 API 服務）
     ports:
-      - "8000:8000"
+      - "8323:8000"
 
     # 環境變量
     environment:
