@@ -1,11 +1,14 @@
-"""BGE-M3 中文 Embedder 實作 - TDD Green Phase
+"""BGE-M3 中文 Embedder 實作 - TDD Refactor Phase (優化版)
 
 基於 BAAI/bge-m3 模型實現 1024 維中文語義向量嵌入
 符合 features/bge_m3.feature 的所有行為規格
+
+Author: EvoMem Team
+License: Apache 2.0
 """
 
 import logging
-from typing import List, Optional, cast
+from typing import List, cast
 from FlagEmbedding import BGEM3FlagModel  # type: ignore[import-untyped]
 
 # 配置日誌
@@ -13,26 +16,36 @@ logger = logging.getLogger(__name__)
 
 
 class BGEM3Embedding:
-    """BGE-M3 中文文本嵌入器
+    """BGE-M3 中文文本嵌入器 (獨立版本)
 
     將中文文本轉換為 1024 維語義向量，支援語義搜索和相似度計算。
+
+    Constants:
+        DEFAULT_BATCH_SIZE: 默認批次大小 (256)
+        CHAR_TO_TOKEN_RATIO: 中文字符到 token 的粗略轉換比例 (0.67)
+                            基於假設: 1 token ≈ 1.5 個中文字 (1/1.5 = 0.67)
 
     特性:
     - 模型: BAAI/bge-m3
     - 向量維度: 1024
-    - 最大序列長度: 8192 tokens
-    - 精度: FP16
-    - 設備: CPU（相容性優先）
+    - 最大序列長度: 8192 tokens (可配置)
+    - 精度: FP16 (可配置)
+    - 設備: CPU/GPU (可配置)
+    - 中文優化: 針對中文語義理解進行優化
 
     範例:
         >>> embedder = BGEM3Embedding()
         >>> vector = embedder.embed("這是一個測試句子")
         >>> len(vector)
         1024
-        >>> vectors = embedder.batch_embed(["文本1", "文本2"])
+        >>> vectors = embedder.batch_embed(["文本1", "文本2", "文本3"])
         >>> len(vectors)
-        2
+        3
     """
+
+    # 類常量
+    DEFAULT_BATCH_SIZE = 256
+    CHAR_TO_TOKEN_RATIO = 0.67  # 1 token ≈ 1.5 字
 
     def __init__(
         self,
@@ -48,20 +61,54 @@ class BGEM3Embedding:
             use_fp16: 是否使用 FP16 精度，默認 True（提高效能）
             device: 運行設備，默認 "cpu"（相容性優先）
             max_length: 最大序列長度，默認 8192
+
+        Raises:
+            Exception: 當模型載入失敗時
         """
         self.model_name = model_name
         self.use_fp16 = use_fp16
         self.device = device
         self.max_length = max_length
+        self.embedding_dims = 1024  # BGE-M3 固定維度
 
-        # 載入模型
+        # 載入 BGE-M3 模型
         logger.info(f"Loading {model_name} with FP16={use_fp16} on {device}")
-        self.model = BGEM3FlagModel(
-            model_name,
-            use_fp16=use_fp16,
-            device=device
-        )
-        logger.info("Model loaded successfully")
+        try:
+            # type: Any due to FlagEmbedding missing type stubs
+            self.model = BGEM3FlagModel(
+                model_name,
+                use_fp16=use_fp16,
+                device=device
+            )
+            logger.info("BGE-M3 model loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load BGE-M3 model: {e}")
+            raise
+
+    def _validate_texts(self, texts: List[str]) -> None:
+        """驗證文本列表
+
+        Args:
+            texts: 待驗證的文本列表
+
+        Raises:
+            ValueError: 當文本列表為空或包含空字串時
+
+        Warning:
+            當文本長度超過 max_length 時發出警告
+        """
+        # 檢查空文本
+        if not texts or any(not t or not t.strip() for t in texts):
+            raise ValueError("不能嵌入空文本")
+
+        # 檢查文本長度
+        for i, t in enumerate(texts):
+            estimated_tokens = len(t) * self.CHAR_TO_TOKEN_RATIO
+            if estimated_tokens > self.max_length:
+                logger.warning(
+                    f"第 {i+1} 個文本長度 ({len(t)} 字) 可能超過 "
+                    f"{self.max_length} tokens，將自動截斷"
+                )
 
     def embed(self, text: str) -> List[float]:
         """嵌入單個文本為 1024 維向量
@@ -70,103 +117,88 @@ class BGEM3Embedding:
             text: 待嵌入的文本
 
         Returns:
-            1024 維浮點數向量列表
+            1024 維向量 (List[float])
 
         Raises:
             ValueError: 當文本為空時
+            Exception: 當嵌入過程失敗時
 
         範例:
-            >>> embedder = BGEM3Embedding()
-            >>> vector = embedder.embed("人工智慧正在改變世界")
-            >>> len(vector)
+            >>> vec = embedder.embed("人工智慧正在改變世界")
+            >>> len(vec)
             1024
-            >>> all(-1 <= x <= 1 for x in vector)
-            True
         """
         # 驗證輸入
-        if not text or not text.strip():
-            raise ValueError("不能嵌入空文本")
-
-        # 檢查文本長度（粗略估計：1 token ≈ 1.5 字）
-        estimated_tokens = len(text) * 0.67
-        if estimated_tokens > self.max_length:
-            logger.warning(
-                f"文本長度 ({len(text)} 字) 可能超過 {self.max_length} tokens，"
-                f"將自動截斷"
-            )
+        self._validate_texts([text])
 
         # 嵌入文本
-        result = self.model.encode(
-            [text],
-            batch_size=1,
-            max_length=self.max_length
-        )
+        try:
+            result = self.model.encode(
+                [text],
+                batch_size=1,
+                max_length=self.max_length
+            )
+        except Exception as e:
+            logger.error(f"Embedding failed: {e}")
+            raise
 
-        # 返回第一個向量（轉為 Python list）
+        # 返回結果 (符合 List[float] 類型)
         return cast(List[float], result['dense_vecs'][0].tolist())
-
-    def _validate_texts(self, texts: List[str]) -> None:
-        """驗證文本列表，確保所有文本非空
-
-        Args:
-            texts: 待驗證的文本列表
-
-        Raises:
-            ValueError: 當任何文本為空時
-        """
-        for i, text in enumerate(texts):
-            if not text or not text.strip():
-                raise ValueError(f"第 {i+1} 個文本為空，不能嵌入空文本")
 
     def batch_embed(
         self,
         texts: List[str],
-        batch_size: int = 256
+        batch_size: int = DEFAULT_BATCH_SIZE
     ) -> List[List[float]]:
         """批次嵌入多個文本
 
         Args:
             texts: 待嵌入的文本列表
-            batch_size: 批次大小，默認 256（效能優化）
+            batch_size: 批次大小，默認 256
 
         Returns:
-            向量列表，每個向量為 1024 維浮點數列表
+            向量列表，每個向量為 1024 維 (List[List[float]])
+
+        Raises:
+            ValueError: 當文本列表為空或包含空文本時
+            Exception: 當嵌入過程失敗時
 
         範例:
-            >>> embedder = BGEM3Embedding()
-            >>> vectors = embedder.batch_embed([
-            ...     "人工智慧正在改變世界",
-            ...     "機器學習是 AI 的核心技術",
-            ...     "深度學習推動了 AI 的發展"
-            ... ])
-            >>> len(vectors)
+            >>> vecs = embedder.batch_embed(["文本1", "文本2", "文本3"])
+            >>> len(vecs)
             3
-            >>> all(len(v) == 1024 for v in vectors)
-            True
+            >>> len(vecs[0])
+            1024
         """
         # 處理空列表
         if not texts:
             return []
 
-        # 驗證所有文本非空
+        # 驗證輸入
         self._validate_texts(texts)
 
         # 批次嵌入
-        result = self.model.encode(
-            texts,
-            batch_size=batch_size,
-            max_length=self.max_length
-        )
+        try:
+            result = self.model.encode(
+                texts,
+                batch_size=batch_size,
+                max_length=self.max_length
+            )
+        except Exception as e:
+            logger.error(f"Batch embedding failed: {e}")
+            raise
 
-        # 返回所有向量（轉為 Python list）
-        return cast(List[List[float]], [vec.tolist() for vec in result['dense_vecs']])
+        # 返回結果 (符合 List[List[float]] 類型)
+        return cast(
+            List[List[float]],
+            [vec.tolist() for vec in result['dense_vecs']]
+        )
 
     def __repr__(self) -> str:
         """字串表示"""
         return (
             f"BGEM3Embedding("
             f"model={self.model_name}, "
-            f"fp16={self.use_fp16}, "
-            f"device={self.device}, "
-            f"max_length={self.max_length})"
+            f"dims={self.embedding_dims}, "
+            f"device={self.device})"
         )
